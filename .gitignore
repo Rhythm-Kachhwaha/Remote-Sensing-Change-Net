@@ -1,0 +1,10 @@
+*.pyc
+*.DS_Store
+__pycache__/
+checkpoints/
+vis/
+data/
+outputs/
+pretrained_changeformer/
+sha256
+sha256.pub
