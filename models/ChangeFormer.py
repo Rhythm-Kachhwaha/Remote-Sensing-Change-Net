@@ -640,38 +640,6 @@ class convprojection_base(nn.Module):
         x = self.convd1x(x)
         return x
 
-### This is the basic ChangeFormer module
-class ChangeFormerV1(nn.Module):
-
-    def __init__(self, input_nc=3, output_nc=2, decoder_softmax=False):
-        super(ChangeFormerV1, self).__init__()
-
-        self.Tenc               = Tenc()
-        
-        self.convproj           = convprojection_base()
-
-        self.change_probability = ConvLayer(8, output_nc, kernel_size=3, stride=1, padding=1)
-
-        self.output_softmax     = decoder_softmax
-        self.active             = torch.nn.Softmax(dim=1)
-
-    def forward(self, x1, x2):
-
-        fx1 = self.Tenc(x1)
-        fx2 = self.Tenc(x2)
-
-        DI = []
-        for i in range(0,4):
-            DI.append(torch.abs(fx1[i] - fx2[i]))
-
-        cp = self.convproj(DI)
-
-        cp = self.change_probability(cp)
-
-        if self.output_softmax:
-            cp = self.active(cp)
-
-        return cp
 
 # Transformer Decoder
 class MLP(nn.Module):
@@ -912,64 +880,7 @@ class TDecV2(nn.Module):
 
         return cp
 
-# ChangeFormerV2:
-# Transformer encoder to extract features
-# Feature differencing and pass it through Transformer decoder
-class ChangeFormerV2(nn.Module):
 
-    def __init__(self, input_nc=3, output_nc=2, decoder_softmax=False):
-        super(ChangeFormerV2, self).__init__()
-        #Transformer Encoder
-        self.Tenc   = Tenc()
-        
-        #Transformer Decoder
-        self.TDec   = TDec( input_transform='multiple_select', in_index=[0, 1, 2, 3], align_corners=True, 
-                            in_channels = [64, 128, 320, 512], embedding_dim= 32, output_nc=output_nc, 
-                            decoder_softmax = decoder_softmax, feature_strides=[4, 8, 16, 32])
-        #Final activation
-        self.decoder_softmax = decoder_softmax
-        self.output_activation = torch.nn.Softmax(dim=1)
-
-    def forward(self, x1, x2):
-
-        fx1 = self.Tenc(x1)
-        fx2 = self.Tenc(x2)
-
-        DI = []
-        for i in range(0,4):
-            DI.append(torch.abs(fx1[i] - fx2[i]))
-
-        cp = self.TDec(DI)
-
-        if self.decoder_softmax:
-            cp = self.output_activation(cp)
-
-        return cp
-
-# ChangeFormerV3:
-# Feature differencing and pass it through Transformer decoder
-class ChangeFormerV3(nn.Module):
-
-    def __init__(self, input_nc=3, output_nc=2, decoder_softmax=False):
-        super(ChangeFormerV3, self).__init__()
-        #Transformer Encoder
-        self.Tenc   = Tenc( patch_size=16, embed_dims=[64, 128, 320, 512], num_heads=[1, 2, 4, 8], 
-                            mlp_ratios=[4, 4, 4, 4], qkv_bias=True, norm_layer=partial(nn.LayerNorm, eps=1e-6), 
-                            depths=[3, 4, 6, 3], sr_ratios=[8, 4, 2, 1], drop_rate=0.0, drop_path_rate=0.1)
-        
-        #Transformer Decoder
-        self.TDec   = TDecV2( input_transform='multiple_select', in_index=[0, 1, 2, 3], align_corners=True, 
-                            in_channels = [64, 128, 320, 512], embedding_dim= 64, output_nc=output_nc, 
-                            decoder_softmax = decoder_softmax, feature_strides=[4, 8, 16, 32])
-
-    def forward(self, x1, x2):
-
-        fx1 = self.Tenc(x1)
-        fx2 = self.Tenc(x2)
-
-        cp = self.TDec(fx1, fx2)
-
-        return cp
 
 #Transormer Ecoder with x2, x4, x8, x16 scales
 class EncoderTransformer_x2(nn.Module):
@@ -1294,37 +1205,6 @@ class DecoderTransformer_x2(nn.Module):
         return outputs
 
 
-# ChangeFormerV4:
-class ChangeFormerV4(nn.Module):
-
-    def __init__(self, input_nc=3, output_nc=2, decoder_softmax=False):
-        super(ChangeFormerV4, self).__init__()
-        #Transformer Encoder
-        self.embed_dims = [32, 64, 128, 320, 512]
-        self.depths     = [3, 3, 4, 12, 3] #[3, 3, 6, 18, 3]
-        self.embedding_dim = 256
-
-        self.Tenc_x2    = EncoderTransformer_x2(img_size=256, patch_size=3, in_chans=input_nc, num_classes=output_nc, embed_dims=self.embed_dims,
-                 num_heads=[2, 2, 4, 8, 16], mlp_ratios=[2, 2, 2, 2, 2], qkv_bias=False, qk_scale=None, drop_rate=0.,
-                 attn_drop_rate=0., drop_path_rate=0., norm_layer=nn.LayerNorm,
-                 depths=self.depths, sr_ratios=[8, 4, 2, 1, 1])
-        
-        #Transformer Decoder
-        self.TDec_x2   = DecoderTransformer_x2(input_transform='multiple_select', in_index=[0, 1, 2, 3, 4], align_corners=True, 
-                    in_channels = self.embed_dims, embedding_dim= 256, output_nc=output_nc, 
-                    decoder_softmax = decoder_softmax, feature_strides=[2, 4, 8, 16, 32])
-
-    def forward(self, x1, x2):
-
-        [fx1, fx2] = [self.Tenc_x2(x1), self.Tenc_x2(x2)]
-
-        cp = self.TDec_x2(fx1, fx2)
-
-        # # Save to mat
-        # save_to_mat(x1, x2, fx1, fx2, cp, "ChangeFormerV4")
-
-        # exit()
-        return cp
 
 
 #Transormer Ecoder with x2, x4, x8, x16 scales
@@ -1619,40 +1499,6 @@ class DecoderTransformer_v3(nn.Module):
 
         return outputs
 
-# ChangeFormerV5:
-class ChangeFormerV5(nn.Module):
-
-    def __init__(self, input_nc=3, output_nc=2, decoder_softmax=False, embed_dim=256):
-        super(ChangeFormerV5, self).__init__()
-        #Transformer Encoder
-        self.embed_dims = [64, 128, 320, 512]
-        self.depths     = [3, 6, 16, 3] #[3, 3, 6, 18, 3]
-        self.embedding_dim = embed_dim
-        self.drop_rate = 0.0
-        self.attn_drop = 0.0
-        self.drop_path_rate = 0.1 
-
-        self.Tenc_x2    = EncoderTransformer_v3(img_size=256, patch_size = 4, in_chans=input_nc, num_classes=output_nc, embed_dims=self.embed_dims,
-                 num_heads = [1, 2, 5, 8], mlp_ratios=[4, 4, 4, 4], qkv_bias=True, qk_scale=None, drop_rate=self.drop_rate,
-                 attn_drop_rate = self.attn_drop, drop_path_rate=self.drop_path_rate, norm_layer=partial(nn.LayerNorm, eps=1e-6),
-                 depths=self.depths, sr_ratios=[8, 4, 2, 1])
-        
-        #Transformer Decoder
-        self.TDec_x2   = DecoderTransformer_v3(input_transform='multiple_select', in_index=[0, 1, 2, 3], align_corners=False, 
-                    in_channels = self.embed_dims, embedding_dim= self.embedding_dim, output_nc=output_nc, 
-                    decoder_softmax = decoder_softmax, feature_strides=[2, 4, 8, 16])
-
-    def forward(self, x1, x2):
-
-        [fx1, fx2] = [self.Tenc_x2(x1), self.Tenc_x2(x2)]
-
-        cp = self.TDec_x2(fx1, fx2)
-
-        # # Save to mat
-        # save_to_mat(x1, x2, fx1, fx2, cp, "ChangeFormerV4")
-
-        # exit()
-        return cp
 
 # ChangeFormerV6:
 class ChangeFormerV6(nn.Module):

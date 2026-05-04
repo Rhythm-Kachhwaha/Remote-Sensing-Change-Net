@@ -155,20 +155,7 @@ python demo_DSIFN.py
 
 Predictions are written under `outputs/`.
 
-## Supported Models
 
-Only the ChangeFormer family is exposed:
-
-```text
-ChangeFormerV1
-ChangeFormerV2
-ChangeFormerV3
-ChangeFormerV4
-ChangeFormerV5
-ChangeFormerV6
-```
-
-`ChangeFormerV6` is the default used by the training, evaluation, and demo entry points.
 
 ## Publishing As Your Own Repository
 
