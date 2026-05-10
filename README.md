@@ -8,7 +8,7 @@ This repository keeps the training, evaluation, demo, dataset, and utility code 
 
 The default model is `ChangeFormerV6`. It uses a Siamese setup: image `A` and image `B` pass through the same transformer encoder, the resulting multiscale features are compared and fused, and the decoder predicts a binary change map.
 
-![ChangeFormer architecture](images/IGARS_ChangeFormer.jpeg)
+![ChangeFormer architecture](images/architecture.png)
 
 For `ChangeFormerV6`, the encoder feature scales are `1/2`, `1/4`, `1/8`, and `1/16` with channel sizes `[64, 128, 320, 512]`. The decoder embeds these feature maps, upsamples them to a shared resolution, fuses them, and predicts changed vs unchanged pixels.
 
